@@ -27,6 +27,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import AIPage from "./pages/aipage";
 
 import { supabase } from "./lib/supabase";
 
@@ -97,6 +98,7 @@ return ( <QueryClientProvider client={queryClient}> <TooltipProvider> <Toaster /
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/ai" element={<AIPage />} />
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
