@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 
 import { Camera, Save, Sparkles, User, Flame, Zap, Trophy } from "lucide-react";
+import StreakStats from "@/components/StreakStats";
 
 import {
   calculateLevel,
@@ -261,27 +262,10 @@ const EditProfile = () => {
 
           {/* DYNAMIC STATS */}
           <div className="grid md:grid-cols-2 gap-5 mt-10">
-            {/* STREAK */}
-            <motion.div
-              whileHover={{
-                scale: 1.03,
-              }}
-              className="rounded-3xl border border-orange-400/10 bg-orange-500/5 p-6"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Flame className="text-orange-400" />
-
-                <h2 className="font-bold text-lg">Current Streak</h2>
-              </div>
-
-              <p className="text-4xl font-bold">
-                {profile.streak || 0} Days 🔥
-              </p>
-
-              <p className="text-sm text-gray-400 mt-2">
-                Keep learning daily to increase streak
-              </p>
-            </motion.div>
+            {/* STREAK STATS COMPONENT */}
+            <div className="md:col-span-1">
+              <StreakStats />
+            </div>
 
             {/* XP */}
             <motion.div

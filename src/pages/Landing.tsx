@@ -89,11 +89,54 @@ export default function Landing() {
 
   const [open, setOpen] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1800);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Device-local daily streak using localStorage
+    const KEY_STREAK = "pl_streak";
+    const KEY_LAST = "pl_last_active";
+
+    const today = new Date();
+    const todayKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    try {
+      const last = localStorage.getItem(KEY_LAST);
+      const prevStreak = parseInt(localStorage.getItem(KEY_STREAK) || "0", 10) || 0;
+
+      if (last === todayKey) {
+        // same day, keep streak
+        setStreak(prevStreak > 0 ? prevStreak : 1);
+      } else if (last) {
+        const lastDate = new Date(last);
+        const diffMs = today.setHours(0, 0, 0, 0) - lastDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+          const newStreak = prevStreak + 1 || 1;
+          localStorage.setItem(KEY_STREAK, String(newStreak));
+          localStorage.setItem(KEY_LAST, todayKey);
+          setStreak(newStreak);
+        } else {
+          // gap > 1 day, reset
+          localStorage.setItem(KEY_STREAK, "1");
+          localStorage.setItem(KEY_LAST, todayKey);
+          setStreak(1);
+        }
+      } else {
+        // first time
+        localStorage.setItem(KEY_STREAK, "1");
+        localStorage.setItem(KEY_LAST, todayKey);
+        setStreak(1);
+      }
+    } catch (e) {
+      setStreak(0);
+    }
   }, []);
 
   if (loading) {
@@ -345,13 +388,13 @@ export default function Landing() {
             transition={{ duration: 4, repeat: Infinity }}
             className="absolute -left-8 top-10 rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-2xl"
           >
-            <div className="flex items-center gap-3">
-              <Flame className="text-cyan-400" />
-              <div>
-                <p className="text-sm text-slate-300">Your Streak</p>
-                <h4 className="text-xl font-bold">5 Days 🔥</h4>
+              <div className="flex items-center gap-3">
+                <Flame className="text-cyan-400" />
+                <div>
+                  <p className="text-sm text-slate-300">Your Streak</p>
+                  <h4 className="text-xl font-bold">{streak === null ? "—" : `${streak} Days 🔥`}</h4>
+                </div>
               </div>
-            </div>
           </motion.div>
 
           <motion.div

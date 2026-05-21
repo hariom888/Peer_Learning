@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import PeerCard from "@/components/PeerCard";
 import SessionCard from "@/components/SessionCard";
+import StreakStats from "@/components/StreakStats";
 import { useAuth } from "@/contexts/useAuth";
 import { useRole } from "@/contexts/RoleContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -285,62 +286,62 @@ const Dashboard = () => {
         </motion.section>
 
         {/* STATS */}
-        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3 xl:grid-cols-4">
+          <div className="md:col-span-1 xl:col-span-1">
+            <StreakStats />
+          </div>
 
-          {[
-            {
-              label: "Sessions Joined",
-              value: upcomingSessions.length || 0,
-              icon: "📚",
-            },
-            {
-              label: "Study Hours",
-              value: `${(profile?.sessions_completed || 0) * 2}h`,
-              icon: "⏰",
-            },
-            {
-              label: "Global Rank",
-              value:
-                "#" +
-                (
-                  leaderboard.findIndex((u) => u.id === user?.id) + 1 || 0
-                ),
-              icon: "🏆",
-            },
-            {
-              label: "Current Streak",
-              value: `${profile?.sessions_completed || 0} Days`,
-              icon: "🔥",
-            },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              whileHover={{
-                y: -5,
-                scale: 1.02,
-              }}
-              className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-2xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-purple-500/10 opacity-0 transition group-hover:opacity-100" />
+          <div className="md:col-span-2 xl:col-span-3 space-y-6">
+            {[
+              {
+                label: "Sessions Joined",
+                value: upcomingSessions.length || 0,
+                icon: "📚",
+              },
+              {
+                label: "Study Hours",
+                value: `${(profile?.sessions_completed || 0) * 2}h`,
+                icon: "⏰",
+              },
+              {
+                label: "Global Rank",
+                value:
+                  "#" +
+                  (
+                    leaderboard.findIndex((u) => u.id === user?.id) + 1 || 0
+                  ),
+                icon: "🏆",
+              },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                whileHover={{
+                  y: -5,
+                  scale: 1.02,
+                }}
+                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-purple-500/10 opacity-0 transition group-hover:opacity-100" />
 
-              <div className="relative z-10 flex items-center justify-between">
+                <div className="relative z-10 flex items-center justify-between">
 
-                <div>
-                  <p className="text-sm text-slate-400">
-                    {stat.label}
-                  </p>
+                  <div>
+                    <p className="text-sm text-slate-400">
+                      {stat.label}
+                    </p>
 
-                  <h3 className="mt-2 text-3xl font-black text-white">
-                    {stat.value}
-                  </h3>
+                    <h3 className="mt-2 text-3xl font-black text-white">
+                      {stat.value}
+                    </h3>
+                  </div>
+
+                  <div className="text-4xl">
+                    {stat.icon}
+                  </div>
                 </div>
-
-                <div className="text-4xl">
-                  {stat.icon}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </div>
         {/* Analytics */}
         <AnalyticsCharts profile={profile} sessions={upcomingSessions} />

@@ -16,6 +16,7 @@ import Navbar from "./components/Navbar";
 import Chatbot from "./components/Chatbot";
 import StudyRooms from "./components/StudyRooms";
 import Room from "./components/Room";
+import StreakBadge from "./components/StreakBadge";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -92,6 +93,7 @@ function AppContent() {
   return (
     <>
       <div id="sparkle-container"></div>
+      <StreakBadge />
       <Routes>
         <Route
           path="/"
