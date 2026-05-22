@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
   id: string;
@@ -18,31 +19,91 @@ interface UserProfile {
   points: number | null;
   sessions_completed: number | null;
   created_at: string;
+  last_active_at: string | null;
 }
 
 const Admin = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [activeTodayCount, setActiveTodayCount] = useState(0);
 
  useEffect(() => {
   if (!user) return;
 
-  setIsAdmin(true);
-  fetchUsers();
+  checkAdminRole();
 
 }, [user]);
 
+  const checkAdminRole = async () => {
+    try {
+      // Query user_roles table to check if user has admin role
+      const { data: adminRole, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        // PGRST116 = no rows found, which is expected for non-admin users
+        console.error("Error checking admin role:", error);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      if (adminRole && adminRole.role === "admin") {
+        setIsAdmin(true);
+        fetchUsers();
+      } else {
+        setIsAdmin(false);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error checking admin role:", err);
+      setIsAdmin(false);
+      setLoading(false);
+    }
+  };
+
   const fetchUsers = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, name, email, skills, points, sessions_completed, created_at")
-      .order("created_at", { ascending: false });
-    if (data) setUsers(data);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, email, skills, points, sessions_completed, created_at, last_active_at")
+        .order("created_at", { ascending: false });
+      if (data) {
+        setUsers(data);
+        // Calculate active users (active in the last 24 hours)
+        const activeCount = calculateActiveTodayCount(data);
+        setActiveTodayCount(activeCount);
+      }
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load users data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateActiveTodayCount = (userList: UserProfile[]): number => {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    return userList.filter(u => {
+      if (!u.last_active_at) return false;
+      const lastActive = new Date(u.last_active_at);
+      return lastActive >= oneDayAgo;
+    }).length;
   };
 
   const filteredUsers = users.filter(
@@ -66,6 +127,9 @@ const Admin = () => {
           <Shield className="mx-auto h-16 w-16 text-destructive opacity-50" />
           <h2 className="mt-4 font-heading text-2xl font-bold">Access Denied</h2>
           <p className="mt-2 text-muted-foreground">You don't have admin privileges to view this page.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/dashboard")}>
+            Go to Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -85,7 +149,7 @@ const Admin = () => {
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
             { label: "Total Users", value: users.length, icon: Users },
-            { label: "Active Today", value: Math.floor(users.length * 0.3) || 1, icon: Calendar },
+            { label: "Active Today", value: activeTodayCount, icon: Calendar },
             { label: "Total Sessions", value: users.reduce((a, u) => a + (u.sessions_completed || 0), 0), icon: Calendar },
             { label: "Avg Points", value: Math.round(users.reduce((a, u) => a + (u.points || 0), 0) / (users.length || 1)), icon: Shield },
           ].map((stat) => (
