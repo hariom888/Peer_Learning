@@ -90,7 +90,7 @@ export default function Landing() {
   const [open, setOpen] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const [loading, setLoading] = useState(true); 
+
   const [showBackToTop, setShowBackToTop] = useState(false); 
   const [streak, setStreak] = useState<number | null>(null);
 
