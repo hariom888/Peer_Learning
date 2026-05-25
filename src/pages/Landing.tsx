@@ -89,6 +89,11 @@ export default function Landing() {
 
   const [open, setOpen] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
+=======
+  
+
+>>>>>>> 926703eeea800c3052b8d802a0736c4be3c3e8a4
   const [showBackToTop, setShowBackToTop] = useState(false); 
   const [streak, setStreak] = useState<number | null>(null);
 
