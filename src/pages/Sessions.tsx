@@ -53,8 +53,15 @@ const Sessions = () => {
   const [search, setSearch] = useState("");
 
   const [isVideoActive, setIsVideoActive] = useState(false);
+  const [sessionSummary, setSessionSummary] =
+  useState<any>(null);
+
+
+const [summaryLoading, setSummaryLoading] =
+  useState(false);
 
   const [studyTime, setStudyTime] = useState(60 * 60); // 1 hour
+
 
   const messagesEndRef = useRef<any>(null);
   
@@ -83,6 +90,35 @@ const Sessions = () => {
     };
 
     fetchSessions();
+  }, []);
+
+  // USER ACTIVITY TRACKER
+  useEffect(() => {
+    let idleTimer: any;
+
+    const handleActivity = () => {
+      setUserStatus("Active");
+
+      clearTimeout(idleTimer);
+
+      idleTimer = setTimeout(() => {
+        setUserStatus("Idle");
+      }, 15000);
+    };
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("click", handleActivity);
+
+    handleActivity();
+
+    return () => {
+      clearTimeout(idleTimer);
+
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("click", handleActivity);
+    };
   }, []);
 
   // FILTER SESSIONS
@@ -370,11 +406,56 @@ const Sessions = () => {
 
             {/* SESSIONS */}
             {isVideoActive && selectedSession ? (
-              <VideoRoom 
-                roomName={selectedSession.id} 
-                userName={user?.user_metadata?.full_name || "Anonymous Learner"} 
-                onLeave={() => setIsVideoActive(false)} 
-              />
+              <VideoRoom
+  roomName={selectedSession.id}
+  userName={
+    user?.user_metadata?.full_name ||
+    "Anonymous Learner"
+  }
+  onLeave={async () => {
+    setIsVideoActive(false);
+
+    if (!selectedSession || messages.length === 0)
+      return;
+
+    try {
+      setSummaryLoading(true);
+
+      const response = await fetch(
+        "http://localhost:5000/api/ai/generate-summary",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      setSessionSummary(data);
+
+      await (supabase as any)
+        .from("session_summaries")
+        .insert({
+          session_id: selectedSession.id,
+          summary: data.summary,
+          key_takeaways:
+            data.key_takeaways || [],
+        });
+    } catch (error) {
+      console.error(
+        "Summary generation failed",
+        error
+      );
+    } finally {
+      setSummaryLoading(false);
+    }
+  }}
+/>
             ) : (
             <div className="grid gap-5">
               {filteredSessions.length > 0 ? (
@@ -596,13 +677,13 @@ const Sessions = () => {
 
             {/* MESSAGES */}
             <div className="flex-1 overflow-y-auto py-5 space-y-4">
-              {messages.map((msg, index) => {
+              {messages.map((msg) => {
                 const isCurrentUser =
                   msg.user_id === user?.id;
 
                 return (
                   <div
-                    key={index}
+                    key={msg.id}
                     className={`flex ${
                       isCurrentUser
                         ? "justify-end"
@@ -714,6 +795,60 @@ const Sessions = () => {
                 <Send size={20} />
               </button>
             </div>
+            {/* SUMMARY LOADING */}
+{summaryLoading && (
+  <div className="mt-5 bg-white/5 border border-white/10 rounded-2xl p-5">
+    <p className="text-cyan-300 font-semibold">
+      Generating AI Summary...
+    </p>
+  </div>
+)}
+
+{/* SESSION SUMMARY */}
+{sessionSummary && (
+  <div className="mt-5 bg-white/5 border border-cyan-400/20 rounded-2xl p-5">
+    <div className="flex items-center gap-2 mb-4">
+      <Sparkles
+        className="text-cyan-400"
+        size={20}
+      />
+
+      <h3 className="text-xl font-bold">
+        Session Summary
+      </h3>
+    </div>
+
+    <p className="text-gray-300 mb-5">
+      {sessionSummary.summary}
+    </p>
+
+    {sessionSummary.key_takeaways
+      ?.length > 0 && (
+      <div>
+        <h4 className="font-semibold mb-3 text-cyan-300">
+          Key Takeaways
+        </h4>
+
+        <ul className="space-y-2">
+          {sessionSummary.key_takeaways.map(
+            (
+              takeaway: string,
+              index: number
+            ) => (
+              <li
+                key={index}
+                className="text-gray-300 flex gap-2"
+              >
+                <span>•</span>
+                <span>{takeaway}</span>
+              </li>
+            )
+          )}
+        </ul>
+      </div>
+    )}
+  </div>
+)}
             </>
             ) : (
               <div className="flex flex-1 items-center justify-center text-gray-500 flex-col gap-3">

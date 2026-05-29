@@ -45,9 +45,9 @@ const EditProfile = () => {
         .update({
           name: profile.name,
           bio: profile.bio,
-          skills: profile.skills && typeof profile.skills === 'string'
+          skills: Array.isArray(profile.skills) ? profile.skills : (profile.skills && typeof profile.skills === 'string'
             ? profile.skills.split(",").map(s => s.trim()).filter(Boolean)
-            : [],
+            : []),
         })
         .eq("id", userId);
 

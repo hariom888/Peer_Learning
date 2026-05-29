@@ -88,10 +88,18 @@ const validateMentorship = () => {
     try {
       setLoading(true);
 
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("You must be logged in to submit an application.");
+        return;
+      }
+
       const { error } = await supabase
         .from("mentors")
         .insert([
           {
+            user_id: user.id,
             full_name: formData.full_name,
             college: formData.college,
             bio: formData.bio,

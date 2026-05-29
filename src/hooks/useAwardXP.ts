@@ -18,10 +18,8 @@ export const useAwardXP = () => {
 
       const xpToAward = getXPForActivity(activity);
 
-      // Securely delegate to the ledger-backed RPC function.
-      // This completely solves the race condition and updates both the profiles
-      // and leaderboard tables atomically.
-      const { error: rpcError } = await (supabase as any).rpc("increment_user_xp", { _amount: xpToAward });
+      // Delegate to the activity-based secure RPC to prevent client-side XP forgery
+      const { error: rpcError } = await (supabase as any).rpc("award_activity_xp", { _activity_type: activity });
 
       if (rpcError) throw rpcError;
 
