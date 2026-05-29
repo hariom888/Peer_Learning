@@ -714,7 +714,6 @@ const [summaryLoading, setSummaryLoading] =
                         })}
                       </p>
                     </div>
-                  </div>
                 );
               })}
 
