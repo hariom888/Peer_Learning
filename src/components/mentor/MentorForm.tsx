@@ -119,14 +119,23 @@ const validateMentorship = () => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
+        if (!isTimeout) clearTimeout(timeout);
         setError("You must be logged in to submit an application.");
         setLoading(false);
+
+        return;
+      }
+
+      const { error } = await supabase
+        .from("mentors" as any)
+
         clearTimeout(timeout);
         return;
       }
 
       const { error: insertError } = await (supabase as any)
         .from("mentors")
+
         .insert([
           {
             user_id: user.id,
@@ -143,10 +152,15 @@ const validateMentorship = () => {
       if (isTimeout) return;
       clearTimeout(timeout);
 
+      if (error) {
+        console.error(error);
+        setError(error.message || "Something went wrong!");
+
       if (insertError) {
         console.error(insertError);
         setError("Something went wrong!");
         setLoading(false);
+
         return;
       }
 

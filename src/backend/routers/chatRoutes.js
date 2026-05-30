@@ -1,6 +1,7 @@
 import express from "express";
 import OpenAI from "openai";
-import { requireAuth } from "../middlewares/requireAuth.js";
+import { requireAuth, requireProfileRole } from "../middlewares/requireAuth.js";
+import { protectedApiRateLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
@@ -26,45 +27,68 @@ const ALLOWED_MODELS = new Set([
 // Server-side cap on tokens per request, regardless of what the caller sends.
 const MAX_TOKENS_CAP = 512;
 
-// Simple in-memory rate limiter: max 20 requests per authenticated user per minute.
-const requestCounts = new Map();
+router.post(
+  "/chat",
+  requireAuth,
+  requireProfileRole("mentor", "learner"),
+  protectedApiRateLimiter,
+  async (req, res) => {
+    try {
+      const {
+        messages,
+        systemPrompt,
+        model = "openai/gpt-3.5-turbo",
+        max_tokens,
+        temperature = 0.7,
+      } = req.body;
 
-const rateLimiter = (req, res, next) => {
-  const userId = req.user.id;
-  const now = Date.now();
-  const windowMs = 60 * 1000;
-  const maxRequests = 20;
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: "A non-empty messages array is required." });
+      }
 
-  const entry = requestCounts.get(userId);
+      // Validate each message has the expected shape to avoid sending malformed
+      // requests upstream.
+      const isValid = messages.every(
+        (m) =>
+          typeof m === "object" &&
+          (m.role === "user" || m.role === "assistant" || m.role === "system") &&
+          typeof m.content === "string"
+      );
 
-  if (!entry || now - entry.windowStart >= windowMs) {
-    requestCounts.set(userId, { count: 1, windowStart: now });
-    return next();
-  }
+      if (!isValid) {
+        return res
+          .status(400)
+          .json({ error: "Each message must have a role (user|assistant|system) and a string content field." });
+      }
 
-  if (entry.count >= maxRequests) {
-    return res.status(429).json({
-      error: "Too many requests. Please wait before sending more messages.",
-    });
-  }
+      // Reject unknown models to prevent cost escalation.
+      if (!ALLOWED_MODELS.has(model)) {
+        return res.status(400).json({ error: "Requested model is not allowed." });
+      }
 
-  entry.count += 1;
-  next();
-};
+      // Cap token count server-side regardless of caller input.
+      const safeMaxTokens = Math.min(
+        typeof max_tokens === "number" ? max_tokens : MAX_TOKENS_CAP,
+        MAX_TOKENS_CAP
+      );
 
-router.post("/chat", requireAuth, rateLimiter, async (req, res) => {
-  try {
-    const {
-      messages,
-      systemPrompt,
-      model = "openai/gpt-3.5-turbo",
-      max_tokens,
-      temperature = 0.7,
-    } = req.body;
+      const chatMessages = systemPrompt
+        ? [{ role: "system", content: String(systemPrompt) }, ...messages]
+        : messages;
 
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "A non-empty messages array is required." });
+      const response = await openrouter.chat.completions.create({
+        model,
+        messages: chatMessages,
+        max_tokens: safeMaxTokens,
+        temperature,
+      });
+
+      res.json({ reply: response.choices[0].message.content });
+    } catch (error) {
+      console.error("Chat route error:", error);
+      res.status(500).json({ error: "Failed to get a response from the AI service." });
     }
+
 
     // Cap the number of messages in the conversation history. Without this
     // limit a caller can send an unbounded history and consume a large number
@@ -122,7 +146,8 @@ router.post("/chat", requireAuth, rateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Chat route error:", error);
     res.status(500).json({ error: "Failed to get a response from the AI service." });
+
   }
-});
+);
 
 export default router;

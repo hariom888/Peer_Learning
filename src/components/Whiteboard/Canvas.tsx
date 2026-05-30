@@ -171,7 +171,7 @@ export default function Canvas({ roomId }: Props) {
         });
 
       if (data) {
-        strokesRef.current = data;
+        strokesRef.current = data as any;
 
         replayCanvas();
       }
