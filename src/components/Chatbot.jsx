@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
+import { API_BASE_URL } from "@/config/api";
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -54,8 +54,6 @@ export default function Chatbot() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const userMsg = { role: "user", text: input, user_id: user.id };
-
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
@@ -78,7 +76,7 @@ export default function Chatbot() {
         role: msg.role,
         content: msg.text,
       }));
-      const res = await fetch("/api/ai/ask", {
+      const res = await fetch(`${API_BASE_URL}/api/ai/ask`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -109,9 +107,6 @@ export default function Chatbot() {
       const data = await res.json();
 
       const botReply = data?.reply || "No response 😅";
-
-
-      const botMsg = { role: "assistant", text: botReply, user_id: user.id };
 
       const botMsg = { role: "assistant", text: botReply, user_id: userId };
 

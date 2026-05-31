@@ -636,6 +636,8 @@ export type Database = {
           status: string
           student_id: string | null
           mentor_id: string | null
+          seat_limit: number | null
+          participants: number
           title: string | null
           tags: string[] | null
         }
@@ -648,6 +650,8 @@ export type Database = {
           status?: string
           student_id?: string | null
           mentor_id?: string | null
+          seat_limit?: number | null
+          participants?: number
           title?: string | null
           tags?: string[] | null
         }
@@ -660,6 +664,8 @@ export type Database = {
           status?: string
           student_id?: string | null
           mentor_id?: string | null
+          seat_limit?: number | null
+          participants?: number
           title?: string | null
           tags?: string[] | null
         }
@@ -702,6 +708,10 @@ export type Database = {
           p_room_id: string
           p_user_email: string
         }
+        Returns: undefined
+      }
+      join_session: {
+        Args: { p_session_id: string }
         Returns: undefined
       }
       tick_session_statuses: {

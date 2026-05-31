@@ -54,6 +54,7 @@ const formSchema = z
     time: z.string().min(1, "Time is required."),
     durationPreset: z.number().optional(),
     durationCustom: z.string().optional(),
+    seatLimit: z.string().optional(),
   })
   .refine(
     (v) => {
@@ -93,6 +94,7 @@ export function CreateSessionDialog({
       description: "",
       time: "12:00",
       durationPreset: 60,
+      seatLimit: "",
     },
   });
 
@@ -122,6 +124,7 @@ export function CreateSessionDialog({
       scheduledAt.setHours(hours, minutes, 0, 0);
 
       const durationMinutes = resolveDurationMinutes(values);
+      const seatLimit = values.seatLimit && values.seatLimit.trim() !== "" ? parseInt(values.seatLimit, 10) : null;
 
       const { error } = await supabase.from("sessions").insert({
         title: values.title,
@@ -130,6 +133,7 @@ export function CreateSessionDialog({
         duration_minutes: durationMinutes,
         status: "scheduled",
         mentor_id: user.id,
+        seat_limit: seatLimit,
       });
 
       if (error) throw error;
@@ -342,6 +346,27 @@ export function CreateSessionDialog({
                 />
               )}
             </div>
+
+            {/* Seat Limit */}
+            <FormField
+              control={form.control}
+              name="seatLimit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Seat Limit (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 50"
+                      className={inputCls}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-red-400" />
+                </FormItem>
+              )}
+            />
 
             <Button
               type="submit"

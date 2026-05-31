@@ -20,6 +20,7 @@ import { useAwardXP } from "@/hooks/useAwardXP";
 import { CreateSessionDialog } from "@/components/CreateSessionDialog";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
 import { generateICS } from "@/utils/calendar";
+import { useToast } from "@/hooks/use-toast";
 
 const tabs = [
   "Upcoming",
@@ -30,6 +31,7 @@ const tabs = [
 const Sessions = () => {
   const { user } = useAuth();
   const { mutate: awardXP } = useAwardXP();
+  const { toast } = useToast();
 
   const [sessions, setSessions] = useState<any[]>([]);
   const [filteredSessions, setFilteredSessions] =
@@ -265,6 +267,26 @@ const [summaryLoading, setSummaryLoading] =
     };
   }, []);
 
+  // JOIN SESSION
+  const handleJoinSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase.rpc("join_session", { p_session_id: sessionId });
+      if (error) {
+        if (error.message.includes("Session is full")) {
+          toast({ title: "Session Full", description: "This session has reached its seat limit.", variant: "destructive" });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: "Success! 🎉", description: "You have joined the session." });
+        awardXP({ activity: 'session_join' });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to join session.", variant: "destructive" });
+    }
+  };
+
   // SEND MESSAGE
   const sendMessage = async () => {
     if (!message.trim() || !selectedSession) return;
@@ -483,7 +505,7 @@ const [summaryLoading, setSummaryLoading] =
 
                       <div className="flex items-center gap-2">
                         <Users size={16} />
-                        {s.participants || 0} learners
+                        {s.participants || 0} {s.seat_limit ? `/ ${s.seat_limit}` : ""} learners
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -522,8 +544,16 @@ const [summaryLoading, setSummaryLoading] =
 
                     {/* BUTTONS */}
                     <div className="flex gap-3">
-                      <button className="flex-1 bg-gradient-to-r from-cyan-400 to-purple-500 text-black py-3 rounded-2xl font-bold hover:opacity-90 transition">
-                        Join Session
+                      <button 
+                        onClick={(e) => handleJoinSession(e, s.id)}
+                        disabled={s.seat_limit && s.participants >= s.seat_limit}
+                        className={`flex-1 text-black py-3 rounded-2xl font-bold transition ${
+                          s.seat_limit && s.participants >= s.seat_limit 
+                            ? "bg-gray-500 cursor-not-allowed opacity-50" 
+                            : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:opacity-90"
+                        }`}
+                      >
+                        {s.seat_limit && s.participants >= s.seat_limit ? "Session Full" : "Join Session"}
                       </button>
                       
                       <button 

@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from "react";
+import React, { useEffect, Suspense, useState, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Router } from "react-router-dom";
 
@@ -68,38 +68,48 @@ const WithNav = ({ children }: { children: React.ReactNode }) => {
 
 function AppContent() {
   const { user } = useAuth();
+  const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number }[]>([]);
+  const sparkleIdRef = useRef(0);
 
   useEffect(() => {
-    const container = document.getElementById("sparkle-container");
-    if (!container) return;
-
-    const createSparkle = (x: number, y: number) => {
-      const sparkle = document.createElement("div");
-      sparkle.className = "sparkle";
-      sparkle.style.left = `${x}px`;
-      sparkle.style.top = `${y}px`;
-      container.appendChild(sparkle);
-
-      setTimeout(() => sparkle.remove(), 800);
-    };
-
+    let timeouts: NodeJS.Timeout[] = [];
+    
     const handleMouseMove = (e: MouseEvent) => {
-      for (let i = 0; i < 2; i++) {
-        createSparkle(
-          e.clientX + Math.random() * 10 - 5,
-          e.clientY + Math.random() * 10 - 5,
-        );
-      }
+      const newSparkles = Array.from({ length: 2 }).map(() => ({
+        id: sparkleIdRef.current++,
+        x: e.clientX + Math.random() * 10 - 5,
+        y: e.clientY + Math.random() * 10 - 5,
+      }));
+
+      setSparkles((prev) => [...prev, ...newSparkles]);
+
+      newSparkles.forEach((sparkle) => {
+        const timeout = setTimeout(() => {
+          setSparkles((prev) => prev.filter((s) => s.id !== sparkle.id));
+        }, 800);
+        timeouts.push(timeout);
+      });
     };
 
     window.addEventListener("mousemove", handleMouseMove);
 
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      timeouts.forEach(clearTimeout);
+    };
   }, []);
 
   return (
     <>
-      <div id="sparkle-container"></div>
+      <div id="sparkle-container">
+        {sparkles.map((sparkle) => (
+          <div
+            key={sparkle.id}
+            className="sparkle"
+            style={{ left: `${sparkle.x}px`, top: `${sparkle.y}px`, position: 'absolute', pointerEvents: 'none' }}
+          />
+        ))}
+      </div>
 
 
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#020617]"><div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" /></div>}>
@@ -304,18 +314,22 @@ function AppContent() {
           <Route
             path="/anonymous-doubts"
             element={
-              <WithNav>
-                <AnonymousDoubts />
-              </WithNav>
+              <ProtectedRoute>
+                <WithNav>
+                  <AnonymousDoubts />
+                </WithNav>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/contributor-dashboard"
             element={
-              <WithNav>
-                <ContributorDashboard />
-              </WithNav>
+              <ProtectedRoute>
+                <WithNav>
+                  <ContributorDashboard />
+                </WithNav>
+              </ProtectedRoute>
             }
           />
 

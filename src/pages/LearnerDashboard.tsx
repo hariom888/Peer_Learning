@@ -1,43 +1,28 @@
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/useAuth";
-import { useEffect, useState } from "react";
-
+import { useQuery } from "@tanstack/react-query";
+import { API_BASE_URL } from "@/config/api";
 import RecommendedPartners from "@/components/recommendations/RecommendedPartners";
 const LearnerDashboard = () => {
   const { user } = useAuth();
   const { currentMode } = useRole();
-    const [partners, setPartners] = useState([]);
-  const [loadingPartners, setLoadingPartners] = useState(true);
-
-  useEffect(() => {
-    const fetchPartners = async () => {
-      try {
-        setLoadingPartners(true);
-
-        const token = localStorage.getItem("token");
-
-        const response = await fetch(
-          "http://localhost:5000/api/match/recommendations",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          setPartners(data.recommendations || []);
+  const { data: partners = [], isLoading: loadingPartners } = useQuery({
+    queryKey: ["recommended-partners"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/match/recommendations`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      } catch (error) {
-        console.error("Failed to fetch partners:", error);
-      } finally {
-        setLoadingPartners(false);
-      }
-    };
-
-    fetchPartners();
-  }, []);
+      );
+      if (!response.ok) throw new Error("Failed to fetch partners");
+      const data = await response.json();
+      return data.recommendations || [];
+    },
+  });
   const displayName =
     user?.user_metadata?.name ||
     user?.user_metadata?.full_name ||
