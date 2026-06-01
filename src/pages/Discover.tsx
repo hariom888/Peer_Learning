@@ -125,9 +125,9 @@ const Discover = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // FETCH USERS
+  // 1. FETCH INITIAL DATA (User Profile & Connections) - Runs ONCE on mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
         const { data } = await supabase.auth.getUser();
         const user = data?.user;
@@ -146,9 +146,32 @@ const Discover = () => {
 
         setCurrentUser(current);
 
-        setCurrentUser(current);
+        // FETCH CONNECTIONS
+        const { data: conns } = await (supabase as any)
+          .from("peer_connections")
+          .select("sender_id, receiver_id")
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
+        
+        if (conns) {
+          const connectedIds = conns.map((c: any) => c.sender_id === user.id ? c.receiver_id : c.sender_id);
+          setConnections(connectedIds);
+        }
+      } catch (err) {
+        console.log("Error fetching initial data:", err);
+      }
+    };
 
-        // FETCH PEERS FROM BACKEND
+    fetchInitialData();
+  }, []);
+
+  // 2. FETCH PEERS FROM BACKEND - Runs on search/filter change
+  useEffect(() => {
+    const fetchPeers = async () => {
+      // PERF: Don't fetch peers until the user profile has securely loaded
+      if (!currentUser) return;
+      
+      setLoading(true);
+      try {
         const searchParams = new URLSearchParams();
         if (debouncedSearch.trim()) searchParams.append("search", debouncedSearch.trim());
         if (selectedFilter !== "All") searchParams.append("filter", selectedFilter);
@@ -167,26 +190,15 @@ const Discover = () => {
             setFilteredUsers(apiData.recommendations || []);
           }
         }
-
-        // FETCH CONNECTIONS
-        const { data: conns } = await (supabase as any)
-          .from("peer_connections")
-          .select("sender_id, receiver_id")
-          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
-        
-        if (conns) {
-          const connectedIds = conns.map((c: any) => c.sender_id === user.id ? c.receiver_id : c.sender_id);
-          setConnections(connectedIds);
-        }
       } catch (err) {
-        console.log(err);
+        console.log("Error fetching peers:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [debouncedSearch, selectedFilter]);
+    fetchPeers();
+  }, [debouncedSearch, selectedFilter, currentUser]);
 
   // PRESENCE
   useEffect(() => {
