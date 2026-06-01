@@ -17,6 +17,9 @@ const evictStaleEntries = () => {
 setInterval(evictStaleEntries, CLEANUP_INTERVAL_MS);
 
 export const rateLimiter = (req, res, next) => {
+  // If the user is unauthenticated, fallback to req.ip.
+  // Because 'trust proxy' in app.js is conditionally secured, req.ip cannot be spoofed 
+  // via X-Forwarded-For headers unless explicitly allowed by infrastructure.
   const userId = req.user?.id || req.ip;
   const now = Date.now();
 
