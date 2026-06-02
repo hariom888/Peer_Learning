@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
+import ParticipantCard from "./studyroom/ParticipantCard";
+import StudyTimer from "./studyroom/StudyTimer";
+import ActivityFeed from "./studyroom/ActivityFeed";
 
 export default function Room() {
   const { id } = useParams();
@@ -12,6 +15,7 @@ export default function Room() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [participants, setParticipants] = useState<any[]>([]);
+  const [activities, setActivities] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +42,13 @@ export default function Room() {
         .on('presence', { event: 'sync' }, () => {
           const newState = roomChannel.presenceState();
           const onlineUsers = Object.values(newState).map((p: any) => p[0]);
+
           setParticipants(onlineUsers);
+
+          setActivities([
+            `${onlineUsers.length} participant(s) online`,
+            ...activities,
+          ]);
         })
         .on('postgres_changes', {
           event: 'INSERT',
@@ -49,19 +59,28 @@ export default function Room() {
           fetchMessages(); 
         })
         .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            // 3. Broadcast the REAL name to everyone in the room!
+         if (status === 'SUBSCRIBED') {
             await roomChannel.track({
               user_id: user.id,
-              name: displayName 
+              name: displayName
             });
+
+            setActivities((prev) => [
+              `${displayName} joined the room`,
+              ...prev,
+            ]);
           }
         });
     };
 
     initializeChat();
 
-    return () => {
+      return () => {
+      setActivities((prev) => [
+        `${user?.email?.split("@")[0] || "User"} left the room`,
+        ...prev,
+      ]);
+
       if (roomChannel) supabase.removeChannel(roomChannel);
     };
   }, [id, user]);
@@ -95,7 +114,12 @@ export default function Room() {
     if (!newMessage.trim() || !user) return;
 
     const messageText = newMessage;
-    setNewMessage(''); 
+    setNewMessage('');
+
+    setActivities((prev) => [
+      `You sent a message`,
+      ...prev,
+    ]);
 
     const { error } = await supabase.from('study_room_messages' as any).insert([
       { room_id: id, profile_id: user.id, content: messageText }
@@ -116,7 +140,11 @@ export default function Room() {
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-blue-400">{room.topic}</h1>
-            <p className="text-sm text-slate-400 mt-1">Live Study Session</p>
+            <div className="flex gap-4 mt-1 text-sm text-slate-400">
+              <span>📚 Live Study Session</span>
+              <span>👥 {participants.length} Online</span>
+              <span>💬 {messages.length} Messages</span>
+            </div>
           </div>
           <button 
             onClick={() => navigate('/rooms')}
@@ -175,26 +203,32 @@ export default function Room() {
               </button>
             </form>
           </div>
-
-          <div className="w-64 bg-slate-900 border border-slate-800 rounded-xl flex-col hidden lg:flex overflow-hidden shadow-lg">
-            <div className="p-4 border-b border-slate-800 bg-slate-900/80">
-              <h2 className="font-semibold text-slate-200">Online ({participants.length})</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {participants.map((p, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                  {/* 🚀 UPDATED: Now displaying the name we passed to the tracker */}
-                  <span className="text-slate-300 text-sm font-medium truncate">
-                    {p.name || 'Anonymous Student'}
-                  </span>
-                </div>
-              ))}
-            </div>
+         
+         <div className="w-72 hidden xl:flex flex-col gap-4">
+            <StudyTimer />
+            <ActivityFeed activities={activities} />
           </div>
 
+         <div className="w-64 bg-slate-900 border border-slate-800 rounded-xl flex-col hidden lg:flex overflow-hidden shadow-lg">
+        <div className="p-4 border-b border-slate-800 bg-slate-900/80">
+          <h2 className="font-semibold text-slate-200">
+            Online ({participants.length})
+          </h2>
         </div>
-      </div>
-    </div>
-  );
-}
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {participants.map((p, idx) => (
+           <ParticipantCard
+                key={idx}
+                name={p.name || "Anonymous Student"}
+                status="online"
+              />
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+       </div>
+      );
+      }
