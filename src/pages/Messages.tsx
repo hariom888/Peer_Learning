@@ -576,8 +576,8 @@ const Messages = ({ user }: MessagesProps) => {
 
     if (!content || !selectedUser || !currentUserId) return;
 
-    if (content.length > 2000) {
-      console.error("Message exceeds the 2000 character limit.");
+    if (content.length > 1000) {
+      console.error("Message exceeds the 1000 character limit.");
       return;
     }
 
@@ -900,12 +900,17 @@ const Messages = ({ user }: MessagesProps) => {
                     }}
                     placeholder={`Message ${selectedDisplayName}...`}
                     className="min-h-[72px] w-full resize-none bg-transparent px-2 py-1 text-sm outline-none placeholder:text-slate-500"
-                    maxLength={2000}
+                  maxLength={1000}
                   />
 
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-xs text-slate-500">Press Enter to send, Shift+Enter for a new line.</p>
-
+                 <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-slate-500">Press Enter to send, Shift+Enter for a new line.</p>
+                      <p className={`text-xs ${newMessage.length > 900 ? newMessage.length > 1000 ? "text-red-400" : "text-yellow-400" : "text-slate-500"}`}>
+                        {newMessage.length}/1000 characters
+                        {newMessage.length > 1000 && " — Message too long!"}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => void sendMessage()}
