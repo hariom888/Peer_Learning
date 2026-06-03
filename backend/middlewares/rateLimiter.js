@@ -7,7 +7,6 @@ export const createRateLimiter = (options = {}) => {
   const windowMs = options.windowMs || WINDOW_MS;
   const maxRequests = options.maxRequests || MAX_REQUESTS;
   const maxEntries = options.maxEntries || MAX_ENTRIES;
-  const message = options.message || "Too many requests. Please wait before sending more messages.";
   const store = new Map();
   let cleanupTime = Date.now();
 
@@ -39,8 +38,7 @@ export const createRateLimiter = (options = {}) => {
 
     if (entry.count >= maxRequests) {
       return res.status(429).json({
-        statusCode: 429,
-        message,
+        error: "Too many requests. Please wait before sending more messages.",
       });
     }
 
