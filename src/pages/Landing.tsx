@@ -3,6 +3,7 @@ import { ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { useState, useEffect } from "react";
 
 import { Hero } from "@/components/landing/Hero";
@@ -40,6 +41,7 @@ const faqs = [
 export default function Landing() {
   const { scrollYProgress } = useScroll();
   const { setTheme } = useTheme();
+  const { openPreferences } = useCookieConsent();
 
   const [open, setOpen] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -354,6 +356,21 @@ export default function Landing() {
             >
               Privacy Policy
             </Link>
+
+            <Link
+              to="/cookies-policy"
+              className="transition hover:text-cyan-400"
+            >
+              Cookies Policy
+            </Link>
+
+            <button
+              type="button"
+              onClick={openPreferences}
+              className="transition hover:text-cyan-400"
+            >
+              Cookie Settings
+            </button>
           </div>
 
           <div className="text-slate-500">© 2026 PeerLearn</div>
