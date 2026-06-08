@@ -73,7 +73,24 @@ export const sendEmail = async (email, url) => {
     from: emailUser,
     to: email,
     subject: "Password Reset",
-    html: `<p>Click below to reset password:</p>
-           <a href="${url}">${url}</a>`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>You requested a password reset for your account. Click the button below to reset your password.</p>
+        <p>This link will expire in 1 hour.</p>
+
+        <a href="${url}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+          Reset Password
+        </a>
+
+        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+          If you did not request a password reset, please ignore this email and your password will remain unchanged.
+        </p>
+
+        <p style="color: #999; font-size: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+          For security reasons, do not share this link with anyone. This email contains a secure token that should not be shared.
+        </p>
+      </div>
+    `,
   });
 };
