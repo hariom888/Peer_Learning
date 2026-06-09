@@ -179,8 +179,14 @@ export const sendMentorshipCheckinReminders = async (req, res, next) => {
     const supabase = getSupabaseClient();
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-    
-    // Find milestones due in the next 24 hours or overdue, that are not completed
+
+    // Lower bound: only look back 7 days to avoid reprocessing ancient overdue
+    // milestones on every cron run. This prevents unbounded query growth while
+    // still notifying users about recently overdue items. Adjustable if needed.
+    const lookbackDays = 7;
+    const windowStart = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+
+    // Find milestones due within the bounded window [7 days ago … tomorrow]
     const { data: milestones, error } = await supabase
       .from("mentorship_milestones")
       .select(`
@@ -196,7 +202,10 @@ export const sendMentorshipCheckinReminders = async (req, res, next) => {
       `)
       .eq("is_completed", false)
       .not("due_date", "is", null)
-      .lte("due_date", tomorrow);
+      .gte("due_date", windowStart)
+      .lte("due_date", tomorrow)
+      .order("due_date", { ascending: true })
+      .limit(500);
 
     if (error) {
       return res.status(500).json({ error: error.message });
