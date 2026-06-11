@@ -135,11 +135,12 @@ const Navbar = () => {
           : []),
       ]
     : [
-        {
-          to: "/",
-          label: "Home",
-          icon: BookOpen,
-        },
+       {
+  to: "/",
+  label: "Home",
+  icon: BookOpen,
+  onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+},
         {
           to: "/#features",
           label: "Features",
@@ -227,16 +228,21 @@ const Navbar = () => {
             );
           }
 
-          return (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={className}
-            >
-              <Icon size={16} />
-              {link.label}
-            </Link>
-          );
+         return (
+  <Link
+    key={link.to}
+    to={link.to}
+    className={className}
+    onClick={() => {
+      if (link.label === "Home") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }}
+  >
+    <Icon size={16} />
+    {link.label}
+  </Link>
+);
         })}
 
 
