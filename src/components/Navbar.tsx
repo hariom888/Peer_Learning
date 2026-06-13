@@ -193,34 +193,52 @@ const Navbar = () => {
 
         {/* DESKTOP NAV */}
         <div className="hidden items-center gap-3 md:flex">
-
           {navLinks.map((link) => {
+          const Icon = link.icon;
 
-            const Icon = link.icon;
+          const active =
+              link.to === "/"
+                ? location.pathname === "/" && !location.hash
+                : link.to.startsWith("/#")
+                ? location.hash === link.to.replace("/", "")
+                : location.pathname === link.to;
 
-            const active = location.pathname === link.to;
+          const className = `flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300
+            ${
+              active
+                ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-lg shadow-cyan-500/20"
+                : "text-gray-300 hover:bg-white/10 hover:text-white"
+            }`;
 
+          if (
+            link.to === "/#features" ||
+            link.to === "/#community" ||
+            link.to === "/#faq"
+          ) {
             return (
-              <Link
+              <a
                 key={link.to}
-                to={link.to}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300
-                  
-                  ${
-                    active
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20"
-                      : "text-gray-300 hover:bg-white/10 hover:text-white"
-                  }
-                `}
+                href={link.to.replace("/", "")}
+                className={className}
               >
-
                 <Icon size={16} />
-
                 {link.label}
-
-              </Link>
+              </a>
             );
-          })}
+          }
+
+          return (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={className}
+            >
+              <Icon size={16} />
+              {link.label}
+            </Link>
+          );
+        })}
+
 
         </div>
 
@@ -232,7 +250,8 @@ const Navbar = () => {
                 variant="ghost"
                 size="icon"
                 className="h-10 w-10 rounded-xl text-white hover:bg-white/10"
-                title="Theme: Dark (Default)"
+                aria-label="Change theme"
+                title="Change theme"
               >
                 <Moon className="h-5 w-5 text-cyan-400" />
               </Button>
@@ -259,6 +278,10 @@ const Navbar = () => {
               <DropdownMenuItem className="flex items-center gap-2 cursor-pointer focus:bg-white/10 hover:bg-white/10 focus:text-white px-3 py-2 text-sm rounded-lg" onClick={() => setTheme("orange")}>
                 <span className="h-2 w-2 rounded-full bg-orange-500" />
                 <span className="text-orange-400 font-medium">Sunset Orange</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer focus:bg-white/10 hover:bg-white/10 focus:text-white px-3 py-2 text-sm rounded-lg" onClick={() => setTheme("black-white")}>
+                <span className="h-2 w-2 rounded-full bg-black border border-white-400" />
+                <span className="text-gray-300 font-medium">Black White</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -367,10 +390,10 @@ const Navbar = () => {
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="rounded-lg border border-white/10 bg-white/5 p-3 text-white md:hidden active:scale-95"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
         >
-
           {mobileOpen ? <X /> : <Menu />}
-
         </button>
 
       </div>

@@ -158,7 +158,7 @@ const Discover = () => {
           setConnections(connectedIds);
         }
       } catch (err) {
-        console.log("Error fetching initial data:", err);
+        console.error("Error fetching initial data:", err);
       }
     };
 
@@ -183,7 +183,8 @@ const Discover = () => {
           const res = await fetch(`${API_BASE_URL}/api/match/supabase-discover?${searchParams.toString()}`, {
             headers: {
               Authorization: `Bearer ${session.access_token}`
-            }
+            },
+            credentials:"include"
           });
           const apiData = await res.json();
           if (apiData.success) {
@@ -192,7 +193,7 @@ const Discover = () => {
           }
         }
       } catch (err) {
-        console.log("Error fetching peers:", err);
+        console.error("Error fetching peers:", err);
       } finally {
         setLoading(false);
       }

@@ -27,6 +27,7 @@ export function useSessions(user: any) {
   const channelRef = useRef<any>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const lastMoveRef = useRef(0);
+  const awardedSessionsRef = useRef<Set<string | number>>(new Set());
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -69,7 +70,7 @@ export function useSessions(user: any) {
     if (!selectedSession) return;
 
     const fetchMessages = async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("messages")
         .select("*")
         .eq("session_id", selectedSession.id)
@@ -180,7 +181,7 @@ export function useSessions(user: any) {
   const handleJoinSession = useCallback(async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      const { data: existingParticipant } = await supabase
+      const { data: existingParticipant } = await (supabase as any)
         .from("session_participants")
         .select("*")
         .eq("session_id", sessionId)
@@ -198,6 +199,7 @@ export function useSessions(user: any) {
         toast({ title: "Success! 🎉", description: "You have joined the session." });
 
         if (!existingParticipant) {
+          awardedSessionsRef.current.add(sessionId);
           awardXP({ activity: "session_join" });
         }
       }
@@ -223,7 +225,7 @@ export function useSessions(user: any) {
       });
     }
 
-    await supabase
+    await (supabase as any)
       .from("messages")
       .insert({
         session_id: selectedSession.id,
@@ -259,6 +261,7 @@ export function useSessions(user: any) {
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
+        credentials: "include",
         body: JSON.stringify({ messages }),
       });
 
@@ -269,7 +272,7 @@ export function useSessions(user: any) {
       const parsedData = await res.json();
       setSessionSummary(parsedData);
 
-      await supabase
+      await (supabase as any)
         .from("session_summaries")
         .insert({
           session_id: selectedSession.id,
@@ -285,10 +288,11 @@ export function useSessions(user: any) {
 
   const handleJoinVideo = useCallback(() => {
     setIsVideoActive(true);
-    // Simple mock logic for preventing double XP without using localStorage here directly unless needed
-    // Assuming backend or component handles it or we could use the old local storage logic if needed
-    awardXP({ activity: 'session_join' });
-  }, [awardXP]);
+    if (selectedSession && !awardedSessionsRef.current.has(selectedSession.id)) {
+      awardedSessionsRef.current.add(selectedSession.id);
+      awardXP({ activity: 'session_join' });
+    }
+  }, [awardXP, selectedSession]);
 
   return {
     sessions,

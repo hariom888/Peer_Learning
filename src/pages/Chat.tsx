@@ -3,6 +3,7 @@ import React, { memo, Suspense, useCallback, useContext, useEffect, useMemo, use
 import { ArrowLeft, MessageCircle, Search, Send } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { toast } from "sonner";
 import { AuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAwardXP } from "@/hooks/useAwardXP";
@@ -287,7 +288,7 @@ const Chat = () => {
 
       const { data, error } = await supabase
         .from("messages")
-        .select("id,sender_id,receiver_id,content,text,created_at,read_at")
+        .select("id,sender_id,receiver_id,content,text,created_at")
         .or(
           `and(sender_id.eq.${currentUser.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${currentUser.id})`
         )
@@ -419,7 +420,7 @@ const Chat = () => {
     if (!content || !currentUser?.id || !selectedUser?.id) return;
 
     if (content.length > 2000) {
-      alert("Message exceeds maximum length of 2000 characters.");
+      toast.error("Message exceeds maximum length of 2000 characters.");
       return;
     }
 

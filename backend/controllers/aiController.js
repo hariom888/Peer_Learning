@@ -11,6 +11,13 @@ const RESPONSE_TOKEN_FLOOR = 64;
 const ESTIMATED_CONTEXT_TOKENS = 8000;
 const RESERVED_SYSTEM_AND_BUFFER_TOKENS = 400;
 
+// Per-message content length caps
+const MAX_MESSAGE_CONTENT_LENGTH = 2000;
+const MAX_SUMMARY_MESSAGE_LENGTH = 1000;
+const MAX_SUMMARY_MESSAGES = 50;
+const MAX_ASK_MESSAGES = 10;
+const MAX_TOTAL_CONTENT_LENGTH = 20000;
+
 const summaryResponseSchema = z.object({
   summary: z.string().trim().min(1),
   key_takeaways: z.array(z.string().trim().min(1)).max(12),
@@ -141,18 +148,30 @@ export const askAI = async (req, res, next) => {
       return res.status(400).json({ error: "Invalid messages provided" });
     }
 
-    const hasInvalidRole = messages.some(
-      (m) => m.role !== "user" && m.role !== "assistant"
-    );
-    if (hasInvalidRole) {
-      return res.status(400).json({ error: "Messages can only contain user or assistant roles." });
+    if (messages.length > MAX_ASK_MESSAGES) {
+      return res.status(400).json({ error: `Maximum of ${MAX_ASK_MESSAGES} messages allowed.` });
+    }
+
+    // Validate every message: role, type, and content length
+    let totalContentLength = 0;
+    for (const m of messages) {
+      if (m.role !== "user" && m.role !== "assistant") {
+        return res.status(400).json({ error: "Messages can only contain user or assistant roles." });
+      }
+      if (typeof m.content !== "string") {
+        return res.status(400).json({ error: "Each message must have a string content field." });
+      }
+      if (m.content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return res.status(400).json({ error: `Each message must be under ${MAX_MESSAGE_CONTENT_LENGTH} characters.` });
+      }
+      totalContentLength += m.content.length;
+    }
+
+    if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
+      return res.status(400).json({ error: "Total message content exceeds maximum allowed length." });
     }
 
     const latestMessage = messages[messages.length - 1].content;
-    if (typeof latestMessage !== "string" || latestMessage.length > 2000) {
-      return res.status(400).json({ error: "Message exceeds maximum length of 2000 characters" });
-    }
-
     const maxTokens = budgetResponseTokens(latestMessage, ASK_AI_MAX_TOKENS);
     
     const openRouterMessages = [
@@ -161,7 +180,7 @@ export const askAI = async (req, res, next) => {
         content:
           "You are an AI peer mentor for students. Answer questions about coding, AI, DSA, and roadmaps in a supportive, clear, and approachable way.",
       },
-      ...messages.slice(-10).map(m => ({ role: m.role || "user", content: m.content || "" }))
+      ...messages.map(m => ({ role: m.role, content: m.content }))
     ];
 
     const data = await callOpenRouter({
@@ -193,15 +212,40 @@ export const generateSessionSummary = async (req, res, next) => {
       });
     }
 
-    const recentMessages = messages.slice(-100);
-
-    let conversationText = recentMessages
-      .map((msg) => `${msg.username || "User"}: ${msg.message}`)
-      .join("\n");
-
-    if (conversationText.length > 20000) {
-      conversationText = conversationText.slice(-20000);
+    if (messages.length > MAX_SUMMARY_MESSAGES) {
+      return res.status(400).json({
+        error: `Maximum of ${MAX_SUMMARY_MESSAGES} messages allowed for summary generation.`,
+      });
     }
+
+    // Validate and sanitize each message: extract only expected fields,
+    // cap per-message length, and accumulate total content length.
+    let totalContentLength = 0;
+    const sanitizedMessages = [];
+
+    for (const msg of messages) {
+      const username = typeof msg.username === "string" ? msg.username.slice(0, 100) : "User";
+      const message = typeof msg.message === "string" ? msg.message.slice(0, MAX_SUMMARY_MESSAGE_LENGTH) : "";
+
+      if (!message) continue;
+
+      totalContentLength += username.length + message.length;
+      if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
+        break;
+      }
+
+      sanitizedMessages.push({ username, message });
+    }
+
+    if (sanitizedMessages.length === 0) {
+      return res.status(400).json({
+        error: "No valid messages found for summary generation.",
+      });
+    }
+
+    let conversationText = sanitizedMessages
+      .map((msg) => `${msg.username}: ${msg.message}`)
+      .join("\n");
 
     const maxTokens = budgetResponseTokens(conversationText, SUMMARY_MAX_TOKENS);
 
